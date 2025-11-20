@@ -1,0 +1,14 @@
+# Ignore everything by default
+*
+
+# Keep gitignore itself and any folders so Python files can be tracked anywhere
+!.gitignore
+!*/
+
+# Allow Python source files
+!*.py
+
+# Ignore Python build artifacts
+__pycache__/
+*.py[cod]
+*.pyd

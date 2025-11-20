@@ -1,0 +1,118 @@
+# ================ DESCRIPTION ==============================================================================
+
+# This program is used to extract cell counts from an HDF5 file and calculate cell density, 
+# which will then be used as input to the Marianne model.
+
+import os
+import h5py
+import numpy as np
+
+
+def read_frame_counts_per_group(hdf5_path: str) -> dict:
+    """
+    读取 HDF5 中每个图像组每一帧的细胞数量（以 block0_values 的第一维作为计数）。
+
+    返回:
+        dict[group_name -> dict[frame_index -> count]]
+    """
+    group_to_framecounts = {}
+    with h5py.File(hdf5_path, 'r') as f:
+        image_groups = list(f.keys())
+        for image_group in image_groups:
+            frame_counts = {}
+            for frame_num in range(161):
+                frame_name = f"frame{frame_num}"
+                if frame_name in f[image_group]:
+                    frame_counts[frame_num] = f[image_group][frame_name]['block0_values'].shape[0]
+            group_to_framecounts[image_group] = frame_counts
+    return group_to_framecounts
+
+
+def compute_mean_std_for_puits(
+    group_to_framecounts: dict,
+    puits_name: str,
+    suffixes: list,
+    channel: str = "C2",
+    max_frame: int = 160,
+    field_area_microns2: float = None,
+) -> tuple:
+    """
+    基于指定 puits（例如 A1）和多次重复（suffixes，如 1..9），
+    计算每一帧的均值与标准差。
+
+    返回:
+        (mean_array, std_array)，长度为帧数（存在数据的帧）。值为密度（cells / micron^2）。
+    """
+    # 构造该 puits 对应的所有图像组名
+    image_groups = [f"Image{puits_name}-{s}-{channel}" for s in suffixes]
+
+    means = []
+    stds = []
+    for frame in range(max_frame + 1):
+        densities = []
+        for g in image_groups:
+            frames = group_to_framecounts.get(g, {})
+            if frame in frames:
+                count_value = frames[frame]
+                if field_area_microns2 is not None and field_area_microns2 > 0:
+                    densities.append(float(count_value) / float(field_area_microns2))
+                else:
+                    densities.append(np.nan)
+        if densities:
+            dens_arr = np.array(densities, dtype=float)
+            means.append(np.mean(dens_arr))
+            stds.append(np.std(dens_arr, ddof=0))
+        else:
+            # 若该帧无任何计数，填充为 NaN，保持行数与帧一致
+            means.append(np.nan)
+            stds.append(np.nan)
+    return np.array(means), np.array(stds)
+
+
+def save_mean_std_txt(output_path: str, means: np.ndarray, stds: np.ndarray) -> None:
+    """
+    按两列（均值、标准差）保存为 txt，无表头。
+    会保留所有帧的行数；若存在 NaN，将同样写入 NaN。
+    """
+    data = np.column_stack((means, stds))
+    np.savetxt(output_path, data, fmt='%.6f')
+
+
+def main():
+    # ===== 可按需修改的输入路径与设置 =====
+    hdf5_path = "/Users/dai/Desktop/detection rouge/results 020725/output_file_992_0.0375.hdf5"
+    output_dir = "/Users/dai/Desktop/detection rouge/results 020725"
+    # 将 1..9 次拍摄作为“重复实验”汇总
+    suffixes = list(range(1, 10))
+    # 孔位到“井号”的映射（与 Model_Control.py 中 num_well 一致：1..6）
+    puits_order = ["A1", "A2", "A3", "B1", "B2", "B3"]
+
+    # 视野面积（微米^2）：(宽像素×分辨率)×(高像素×分辨率)
+    pixel_size_um = 1.24
+    image_width_px = 1408
+    image_height_px = 1040
+    field_area_microns2 = (image_width_px * pixel_size_um) * (image_height_px * pixel_size_um)
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 读取所有组-帧计数
+    group_to_framecounts = read_frame_counts_per_group(hdf5_path)
+
+    # 为每个孔位生成一个两列的 txt：第一列均值，第二列标准差
+    for idx, puits in enumerate(puits_order, start=1):
+        means, stds = compute_mean_std_for_puits(
+            group_to_framecounts,
+            puits,
+            suffixes,
+            field_area_microns2=field_area_microns2,
+        )
+        # 按 Model_Control.py 期望风格命名（两列数据，文件名可直接替换 path_exp）。单位：cells/µm^2
+        out_txt = os.path.join(output_dir, f"0_Gy_Well{idx}_3exps.txt")
+        save_mean_std_txt(out_txt, means, stds)
+        print(f"Saved: {out_txt}")
+
+
+if __name__ == "__main__":
+    main()
+
+
