@@ -50,7 +50,7 @@ def calculate_puits_stats(cell_counts, puits_groups):
         }
     return puits_stats
 
-def plot_puits_cell_counts(puits_stats, suffix):
+def plot_puits_cell_counts(puits_stats, suffix, puits_concentrations=None):
     plt.figure(figsize=(15, 8))
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
     for i, (puits_name, stats) in enumerate(puits_stats.items()):
@@ -58,7 +58,10 @@ def plot_puits_cell_counts(puits_stats, suffix):
         x = np.arange(0, n_points * 1.5, 1.5)
         y = stats['mean_counts']
         variance = stats['variances']
-        plt.scatter(x, y, label=puits_name, color=colors[i], marker='o', s=50, alpha=0.7)
+        label_text = puits_name
+        if puits_concentrations and puits_name in puits_concentrations:
+            label_text = f" ({puits_concentrations[puits_name]:.2f} x10^5/ml)"
+        plt.scatter(x, y, label=label_text, color=colors[i], marker='o', s=50, alpha=0.7)
         plt.fill_between(x, np.array(y) - np.sqrt(np.array(variance)), np.array(y) + np.sqrt(np.array(variance)), color=colors[i], alpha=0.1)
     plt.xlabel('Time (h)', fontsize=24, fontweight='bold')
     plt.ylabel('Average Cell Count', fontsize=24, fontweight='bold')
@@ -77,23 +80,32 @@ def main():
 
         # 汇总9个champs后绘制单张图
         puits_image_suffix = [str(s) for s in range(1, 10)]
+        # puits_groups = {
+        #         'A1': [f'ImageA1-{s}-C2' for s in puits_image_suffix],
+        #         'A2': [f'ImageA2-{s}-C2' for s in puits_image_suffix],
+        #         'A3': [f'ImageA3-{s}-C2' for s in puits_image_suffix],
+        #         'B1': [f'ImageB1-{s}-C2' for s in puits_image_suffix],
+        #         'B2': [f'ImageB2-{s}-C2' for s in puits_image_suffix],
+        #         'B3': [f'ImageB3-{s}-C2' for s in puits_image_suffix],
+        # }
         puits_groups = {
-#                'A1': [f'ImageA1-{s}-C2' for s in puits_image_suffix],
                 'A2': [f'ImageA2-{s}-C2' for s in puits_image_suffix],
-                'A3': [f'ImageA3-{s}-C2' for s in puits_image_suffix],
-#                'B1': [f'ImageB1-{s}-C2' for s in puits_image_suffix],
                 'B2': [f'ImageB2-{s}-C2' for s in puits_image_suffix],
-                'B3': [f'ImageB3-{s}-C2' for s in puits_image_suffix],
                 'C2': [f'ImageC2-{s}-C2' for s in puits_image_suffix],
+                'A3': [f'ImageA3-{s}-C2' for s in puits_image_suffix],
+                'B3': [f'ImageB3-{s}-C2' for s in puits_image_suffix],
                 'C3': [f'ImageC3-{s}-C2' for s in puits_image_suffix],
         }
+        # 设置从A2到C3的初始浓度（0.11 x10^5开始，每次*2到3.52 x10^5）
+        concentration_values = [0.11, 0.22, 0.44, 0.88, 1.76, 3.52]
+        puits_concentrations = {name: conc for name, conc in zip(puits_groups.keys(), concentration_values)}
         # 计算每个puits在9个champs下的统计信息
         puits_stats = calculate_puits_stats(cell_counts, puits_groups)
         # 绘制并保存汇总图像
-        plot_puits_cell_counts(puits_stats, 'aggregated')
+        plot_puits_cell_counts(puits_stats, 'aggregated', puits_concentrations)
         print("Aggregated plot has been saved.")
     except Exception as e:
         print(f"Error occurred: {str(e)}")
 
 if __name__ == "__main__":
-    main() 
+      main() 
