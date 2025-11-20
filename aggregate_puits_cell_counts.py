@@ -41,7 +41,7 @@ def calculate_puits_stats(cell_counts, puits_groups):
                     counts.append(cell_counts[group][frame])
             if counts:
                 mean_count = np.mean(counts)
-                variance = np.var(counts)
+                variance = np.var(counts, ddof=1) if len(counts) > 1 else 0.0
                 time_series.append(mean_count)
                 variances.append(variance)
         puits_stats[puits_name] = {
@@ -66,31 +66,32 @@ def plot_puits_cell_counts(puits_stats, suffix):
     plt.yticks(fontsize=22)
     plt.legend(fontsize=20, loc='upper right', frameon=True, framealpha=0.95)
     plt.tight_layout()
-    plt.savefig(f'puits_cell_counts_972_0.0375_{suffix}.png', dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
+    plt.savefig(f'puits_cell_counts_1024_0.0375_{suffix}.png', dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
     plt.close()
 
 def main():
-    hdf5_path = "results 202506 proton/output_file_972_0.0375.hdf5"
+    hdf5_path = "results 151025/output_file_1024_0.0375.hdf5"
     try:
         # 读取细胞数量数据
         cell_counts = read_all_cell_counts(hdf5_path)
-        
-        # 循环生成1到9的单独图像
-        for suffix in range(1, 10):
-            puits_image_suffix = [str(suffix)]
-            puits_groups = {
-                'A1': [f'ImageA1-{s}-C2' for s in puits_image_suffix],
+
+        # 汇总9个champs后绘制单张图
+        puits_image_suffix = [str(s) for s in range(1, 10)]
+        puits_groups = {
+#                'A1': [f'ImageA1-{s}-C2' for s in puits_image_suffix],
                 'A2': [f'ImageA2-{s}-C2' for s in puits_image_suffix],
                 'A3': [f'ImageA3-{s}-C2' for s in puits_image_suffix],
-                'B1': [f'ImageB1-{s}-C2' for s in puits_image_suffix],
+#                'B1': [f'ImageB1-{s}-C2' for s in puits_image_suffix],
                 'B2': [f'ImageB2-{s}-C2' for s in puits_image_suffix],
                 'B3': [f'ImageB3-{s}-C2' for s in puits_image_suffix],
-            }
-            # 计算每个puits的统计信息
-            puits_stats = calculate_puits_stats(cell_counts, puits_groups)
-            # 绘制并保存图像，文件名带上编号
-            plot_puits_cell_counts(puits_stats, suffix)
-        print("All plots have been saved.")
+                'C2': [f'ImageC2-{s}-C2' for s in puits_image_suffix],
+                'C3': [f'ImageC3-{s}-C2' for s in puits_image_suffix],
+        }
+        # 计算每个puits在9个champs下的统计信息
+        puits_stats = calculate_puits_stats(cell_counts, puits_groups)
+        # 绘制并保存汇总图像
+        plot_puits_cell_counts(puits_stats, 'aggregated')
+        print("Aggregated plot has been saved.")
     except Exception as e:
         print(f"Error occurred: {str(e)}")
 
