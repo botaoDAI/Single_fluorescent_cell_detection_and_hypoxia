@@ -73,19 +73,20 @@ def save_mean_std_txt(output_path: str, means: np.ndarray, stds: np.ndarray) -> 
 def main():
     # ===== 可按需修改的输入路径与设置 =====
     # HDF5 路径（请指向含有辐射实验的数据文件）
-    hdf5_path = "/Users/dai/Desktop/detection rouge/results 120724/output_file_869_0.0375.hdf5"
+    hdf5_path = "./results 151025/output_file_1024_0.0375.hdf5"
     # 输出目录
-    output_dir = "/Users/dai/Desktop/detection rouge/results 120724"
+    output_dir = "../Cell_Radiation_Proliferation_Model/results txt for model 1015/hypoxie"
     # 剂量（用于输出文件命名，形如 "{dose}_Gy_WellX_3exps.txt"）
-    dose_gy = 15  # 可修改为 0, 5, 10, 15, 20 等
+    dose_gy = 10  # 可修改为 0, 5, 10, 15, 20 等
     # 命名所需标签（与 Model_in_Response_to_Radiation_with_logistic_in_Cd_Cr.py 的 path_exp 一致）
     experiment_tag = "Incucyte_F98"
-    date_str = "2024_07_12"
+    date_str = "2025_10_15"
     smooth_tag = "smooth=35"
     # 将 1..9 次拍摄作为“重复实验”汇总
     suffixes = list(range(1, 10))
     # 孔位顺序与 Well 编号对应关系（1..6）
-    puits_order = ["A1", "A2", "A3", "B1", "B2", "B3"]
+    #puits_order = ["A1", "A2", "A3", "B1", "B2", "B3"]
+    puits_order = [ "A2", "B2", "C2", "A3", "B3", "C3"]
 
     # 视野面积（微米^2）：(宽像素×分辨率)×(高像素×分辨率)
     pixel_size_um = 1.24

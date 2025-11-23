@@ -80,12 +80,13 @@ def save_mean_std_txt(output_path: str, means: np.ndarray, stds: np.ndarray) -> 
 
 def main():
     # ===== 可按需修改的输入路径与设置 =====
-    hdf5_path = "/Users/dai/Desktop/detection rouge/results 020725/output_file_992_0.0375.hdf5"
-    output_dir = "/Users/dai/Desktop/detection rouge/results 020725"
+    hdf5_path = "./results 151025/output_file_1023_0.0375.hdf5"
+    output_dir = "./results 151025"
     # 将 1..9 次拍摄作为“重复实验”汇总
     suffixes = list(range(1, 10))
     # 孔位到“井号”的映射（与 Model_Control.py 中 num_well 一致：1..6）
-    puits_order = ["A1", "A2", "A3", "B1", "B2", "B3"]
+    #puits_order = ["A1", "A2", "A3", "B1", "B2", "B3"]
+    puits_order = [ "A2", "B2", "C2", "A3", "B3", "C3"]
 
     # 视野面积（微米^2）：(宽像素×分辨率)×(高像素×分辨率)
     pixel_size_um = 1.24

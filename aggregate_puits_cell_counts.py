@@ -69,11 +69,11 @@ def plot_puits_cell_counts(puits_stats, suffix, puits_concentrations=None):
     plt.yticks(fontsize=22)
     plt.legend(fontsize=20, loc='upper right', frameon=True, framealpha=0.95)
     plt.tight_layout()
-    plt.savefig(f'puits_cell_counts_1024_0.0375_{suffix}.png', dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
+    plt.savefig(f'puits_cell_counts_1021_0.0375_{suffix}.png', dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
     plt.close()
 
 def main():
-    hdf5_path = "results 151025/output_file_1024_0.0375.hdf5"
+    hdf5_path = "results 151025/output_file_1021_0.0375.hdf5"
     try:
         # 读取细胞数量数据
         cell_counts = read_all_cell_counts(hdf5_path)
