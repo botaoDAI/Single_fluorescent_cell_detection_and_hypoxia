@@ -1,35 +1,49 @@
 import h5py
-import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+# ---- 可调参数放在一起，方便修改 ----
+# 只需改一次标签，输入HDF5和输出图片名都会同步
+RUN_TAG = "1022_0.0375"
+HDF5_PATH = f"results 151025/output_file_{RUN_TAG}.hdf5"
+PUITS_IMAGE_SUFFIX = [str(s) for s in range(1, 10)]
+# 如需包含A1/B1等组，可参考下方格式添加：
+# PUITS_GROUPS = {
+#     'A1': [f'ImageA1-{s}-C2' for s in PUITS_IMAGE_SUFFIX],
+#     ...
+# }
+PUITS_GROUPS = {
+    'A2': [f'ImageA2-{s}-C2' for s in PUITS_IMAGE_SUFFIX],
+    'B2': [f'ImageB2-{s}-C2' for s in PUITS_IMAGE_SUFFIX],
+    'C2': [f'ImageC2-{s}-C2' for s in PUITS_IMAGE_SUFFIX],
+    'A3': [f'ImageA3-{s}-C2' for s in PUITS_IMAGE_SUFFIX],
+    'B3': [f'ImageB3-{s}-C2' for s in PUITS_IMAGE_SUFFIX],
+    'C3': [f'ImageC3-{s}-C2' for s in PUITS_IMAGE_SUFFIX],
+}
+# 从A2到C3的初始浓度（0.11 x10^5开始，每次*2到3.52 x10^5）
+CONCENTRATION_VALUES = [0.11, 0.22, 0.44, 0.88, 1.76, 3.52]
+PUITS_CONCENTRATIONS = {name: conc for name, conc in zip(PUITS_GROUPS.keys(), CONCENTRATION_VALUES)}
+OUTPUT_PATH = f"puits_cell_counts_{RUN_TAG}_aggregated.png"
+
+
 def read_all_cell_counts(hdf5_path):
-    # 创建一个字典来存储结果
+    """读取HDF5文件中每个图像组各帧的细胞数量。"""
     cell_counts = {}
-    
-    # 打开HDF5文件
     with h5py.File(hdf5_path, 'r') as f:
-        # 获取所有图像组的名称
         image_groups = list(f.keys())
-        
-        # 遍历每个图像组
         for image_group in image_groups:
             frame_counts = {}
-            
-            # 遍历每一帧（0-160）
             for frame_num in range(161):
                 frame_name = f"frame{frame_num}"
                 if frame_name in f[image_group]:
-                    # 获取该帧的数据形状（第一维度就是细胞数量）
                     cell_count = f[image_group][frame_name]['block0_values'].shape[0]
                     frame_counts[frame_num] = cell_count
-            
             cell_counts[image_group] = frame_counts
-    
     return cell_counts
 
+
 def calculate_puits_stats(cell_counts, puits_groups):
-    # 存储每个puits的统计信息
+    """按puits分组计算每一帧的平均值与方差。"""
     puits_stats = {}
     for puits_name, image_groups in puits_groups.items():
         time_series = []
@@ -50,7 +64,8 @@ def calculate_puits_stats(cell_counts, puits_groups):
         }
     return puits_stats
 
-def plot_puits_cell_counts(puits_stats, suffix, puits_concentrations=None):
+
+def plot_puits_cell_counts(puits_stats, output_path, puits_concentrations=None):
     plt.figure(figsize=(15, 8))
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
     for i, (puits_name, stats) in enumerate(puits_stats.items()):
@@ -69,43 +84,19 @@ def plot_puits_cell_counts(puits_stats, suffix, puits_concentrations=None):
     plt.yticks(fontsize=22)
     plt.legend(fontsize=20, loc='upper right', frameon=True, framealpha=0.95)
     plt.tight_layout()
-    plt.savefig(f'puits_cell_counts_1021_0.0375_{suffix}.png', dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
+    plt.savefig(output_path, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
     plt.close()
 
-def main():
-    hdf5_path = "results 151025/output_file_1021_0.0375.hdf5"
-    try:
-        # 读取细胞数量数据
-        cell_counts = read_all_cell_counts(hdf5_path)
 
-        # 汇总9个champs后绘制单张图
-        puits_image_suffix = [str(s) for s in range(1, 10)]
-        # puits_groups = {
-        #         'A1': [f'ImageA1-{s}-C2' for s in puits_image_suffix],
-        #         'A2': [f'ImageA2-{s}-C2' for s in puits_image_suffix],
-        #         'A3': [f'ImageA3-{s}-C2' for s in puits_image_suffix],
-        #         'B1': [f'ImageB1-{s}-C2' for s in puits_image_suffix],
-        #         'B2': [f'ImageB2-{s}-C2' for s in puits_image_suffix],
-        #         'B3': [f'ImageB3-{s}-C2' for s in puits_image_suffix],
-        # }
-        puits_groups = {
-                'A2': [f'ImageA2-{s}-C2' for s in puits_image_suffix],
-                'B2': [f'ImageB2-{s}-C2' for s in puits_image_suffix],
-                'C2': [f'ImageC2-{s}-C2' for s in puits_image_suffix],
-                'A3': [f'ImageA3-{s}-C2' for s in puits_image_suffix],
-                'B3': [f'ImageB3-{s}-C2' for s in puits_image_suffix],
-                'C3': [f'ImageC3-{s}-C2' for s in puits_image_suffix],
-        }
-        # 设置从A2到C3的初始浓度（0.11 x10^5开始，每次*2到3.52 x10^5）
-        concentration_values = [0.11, 0.22, 0.44, 0.88, 1.76, 3.52]
-        puits_concentrations = {name: conc for name, conc in zip(puits_groups.keys(), concentration_values)}
-        # 计算每个puits在9个champs下的统计信息
-        puits_stats = calculate_puits_stats(cell_counts, puits_groups)
-        # 绘制并保存汇总图像
-        plot_puits_cell_counts(puits_stats, 'aggregated', puits_concentrations)
-        print("Aggregated plot has been saved.")
+def main():
+    try:
+        cell_counts = read_all_cell_counts(HDF5_PATH)
+        puits_stats = calculate_puits_stats(cell_counts, PUITS_GROUPS)
+        plot_puits_cell_counts(puits_stats, OUTPUT_PATH, PUITS_CONCENTRATIONS)
+        print(f"Aggregated plot has been saved to {OUTPUT_PATH}.")
     except Exception as e:
         print(f"Error occurred: {str(e)}")
 
+
 if __name__ == "__main__":
-      main() 
+    main()
