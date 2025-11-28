@@ -8,6 +8,7 @@ Data layout (per condition directory):
 The script builds one combined plot with 12 curves (6 hypoxie + 6 normoxie),
 then makes one highlight plot per initial density where the focal pair keeps
 full opacity and the other 10 curves are dimmed.
+添加了到一定maximum的截止功能
 """
 
 from pathlib import Path
@@ -24,7 +25,7 @@ NORMOXIE_DIR = Path("../Cell_Radiation_Proliferation_Model/results txt for model
 
 # Choose which set of files to read (same template for both conditions).
 # Switch to the 10 Gy set by replacing the template line below with:
-#FILE_TEMPLATE = "Well{idx}_Incucyte_F98_10Gy_2025_10_15_smooth=35.txt"
+# FILE_TEMPLATE = "Well{idx}_Incucyte_F98_10Gy_2025_10_15_smooth=35.txt"
 FILE_TEMPLATE = "0_Gy_Well{idx}_3exps.txt"
 
 # Initial density dictionary (x10^5/ml) keyed by file number.
@@ -42,6 +43,10 @@ TIME_STEP_HOURS = 1.5
 
 # Where to save figures
 OUTPUT_DIR = Path("./results 151025/hypoxie_normoxie_plots")
+
+# 根据开关只画到 y 第一次达到 1.5e-3 的功能
+CUT_AT_THRESHOLD = True  # 默认关闭以保持原行为
+THRESHOLD_VALUE = 1.5e-3
 
 
 def load_mean_std(path: Path) -> Tuple[np.ndarray, np.ndarray]:
@@ -74,6 +79,17 @@ def build_time_axis(n_points: int) -> np.ndarray:
     return np.arange(n_points, dtype=float) * TIME_STEP_HOURS
 
 
+def maybe_truncate(time_axis: np.ndarray, y_values: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Optionally truncate a curve at the first point reaching the threshold."""
+    if not CUT_AT_THRESHOLD:
+        return time_axis, y_values
+    hit_indices = np.where(y_values >= THRESHOLD_VALUE)[0]  # 首次达到/超过阈值
+    if hit_indices.size == 0:
+        return time_axis, y_values  # 未达到则画全程
+    end_idx = int(hit_indices[0])
+    return time_axis[: end_idx + 1], y_values[: end_idx + 1]
+
+
 def combined_plot(
     hypoxie: Dict[int, Dict[str, np.ndarray]],
     normoxie: Dict[int, Dict[str, np.ndarray]],
@@ -86,9 +102,11 @@ def combined_plot(
     for i, idx in enumerate(sorted(INITIAL_DENSITIES.keys())):
         color = colors[i % len(colors)]
         density = INITIAL_DENSITIES[idx]
+        h_x, h_y = maybe_truncate(time_axis, hypoxie[idx]["mean"])
+        n_x, n_y = maybe_truncate(time_axis, normoxie[idx]["mean"])
         plt.plot(
-            time_axis,
-            hypoxie[idx]["mean"],
+            h_x,
+            h_y,
             linestyle="--",
             color=color,
             linewidth=2.0,
@@ -96,8 +114,8 @@ def combined_plot(
             label=f"Well {idx} hypoxie ({density} x10^5/ml)",
         )
         plt.plot(
-            time_axis,
-            normoxie[idx]["mean"],
+            n_x,
+            n_y,
             linestyle="-",
             marker="o",
             markersize=3,
@@ -134,9 +152,11 @@ def highlight_plot(
         density = INITIAL_DENSITIES[idx]
         emphasis = 1.0 if idx == focus_idx else faded_alpha
         linewidth = 2.2 if idx == focus_idx else 1.3
+        h_x, h_y = maybe_truncate(time_axis, hypoxie[idx]["mean"])
+        n_x, n_y = maybe_truncate(time_axis, normoxie[idx]["mean"])
         plt.plot(
-            time_axis,
-            hypoxie[idx]["mean"],
+            h_x,
+            h_y,
             linestyle="--",
             color=color,
             linewidth=linewidth,
@@ -144,8 +164,8 @@ def highlight_plot(
             label=f"Well {idx} hypoxie ({density} x10^5/ml)",
         )
         plt.plot(
-            time_axis,
-            normoxie[idx]["mean"],
+            n_x,
+            n_y,
             linestyle="-",
             marker="o",
             markersize=3,

@@ -11,12 +11,12 @@ import numpy as np
 from PIL import Image
 
 # Define stack name
-stack_name = 'B1-1-C2'  # Define your stack name here
+stack_name = 'B2-1-C2'  # Define your stack name here
 
 # Define paths based on stack name
-stack_path = f'./results 020425/stack rouge 957/{stack_name}_stack.tif'
-hdf5_path = './results 020425/output_file_957_0.0375.hdf5'  # Updated HDF5 file path
-output_path = f'./annotated_{stack_name}_stack.tif'  # Output path for the annotated stack
+stack_path = f'./results 151025/stack rouge 1024/{stack_name}_stack.tif'
+hdf5_path = './results 151025/output_file_1024_0.0375.hdf5'  # Updated HDF5 file path
+output_path = f'./results 151025/annotated_{stack_name}_stack.tif'  # Output path for the annotated stack
 
 # Load the stack
 with tiff.TiffFile(stack_path) as tif:
