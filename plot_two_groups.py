@@ -1,3 +1,7 @@
+"""
+在缺氧数据缺少时的一次测试，比较两次实验其中两个puits的数量变化（有氧/缺氧），后面应该没用。
+"""
+
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt

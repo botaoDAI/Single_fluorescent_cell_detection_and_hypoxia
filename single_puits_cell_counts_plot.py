@@ -20,6 +20,14 @@ PUITS_GROUP_TEMPLATES = {
 CONCENTRATION_VALUES = [0.11, 0.22, 0.44, 0.88, 1.76, 3.52]
 PUITS_CONCENTRATIONS = {name: conc for name, conc in zip(PUITS_GROUP_TEMPLATES.keys(), CONCENTRATION_VALUES)}
 OUTPUT_TEMPLATE = "results 151025/initial curve/puits_cell_counts_{run_tag}_{suffix}.pdf"
+PIXEL_SIZE_UM = 1.24
+IMAGE_WIDTH_PX = 1408
+IMAGE_HEIGHT_PX = 1040
+FIELD_AREA_MICRONS2 = (IMAGE_WIDTH_PX * PIXEL_SIZE_UM) * (IMAGE_HEIGHT_PX * PIXEL_SIZE_UM)
+# y 轴模式："count"（默认，细胞计数）或 "density"（细胞密度）
+Y_MODE = "density"
+# y 轴上限；None 时按 Matplotlib 自动缩放
+Y_MAX = 0.0014
 
 
 def read_all_cell_counts(hdf5_path):
@@ -61,23 +69,35 @@ def calculate_puits_stats(cell_counts, puits_groups):
     return puits_stats
 
 
-def plot_puits_cell_counts(puits_stats, output_path, puits_concentrations=None):
+def prepare_y_values(mean_counts, variances, y_mode):
+    """根据y轴模式返回对应的y值与标准差。"""
+    y = np.array(mean_counts, dtype=float)
+    std_dev = np.sqrt(np.array(variances, dtype=float))
+    if y_mode == "density":
+        y = y / FIELD_AREA_MICRONS2
+        std_dev = std_dev / FIELD_AREA_MICRONS2
+    return y, std_dev
+
+
+def plot_puits_cell_counts(puits_stats, output_path, puits_concentrations=None, y_mode="count", y_max=None):
     plt.figure(figsize=(15, 8))
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
+    y_label = "Cell count" if y_mode == "count" else "Cell density (cells/µm²)"
     for i, (puits_name, stats) in enumerate(puits_stats.items()):
         n_points = len(stats['mean_counts'])
         x = np.arange(0, n_points * 1.5, 1.5)
-        y = stats['mean_counts']
-        variance = stats['variances']
+        y, std_dev = prepare_y_values(stats['mean_counts'], stats['variances'], y_mode)
         label_text = puits_name
         if puits_concentrations and puits_name in puits_concentrations:
             label_text = f" ({puits_concentrations[puits_name]:.2f} x10^5/ml)"
         plt.scatter(x, y, label=label_text, color=colors[i], marker='o', s=50, alpha=0.7)
-        plt.fill_between(x, np.array(y) - np.sqrt(np.array(variance)), np.array(y) + np.sqrt(np.array(variance)), color=colors[i], alpha=0.1)
+        plt.fill_between(x, y - std_dev, y + std_dev, color=colors[i], alpha=0.1)
     plt.xlabel('Time (h)', fontsize=24, fontweight='bold')
-    plt.ylabel('Average Cell Count', fontsize=24, fontweight='bold')
+    plt.ylabel(y_label, fontsize=24, fontweight='bold')
     plt.xticks(fontsize=22)
     plt.yticks(fontsize=22)
+    if y_max is not None:
+        plt.ylim(top=y_max)
     plt.legend(fontsize=20, loc='upper right', frameon=True, framealpha=0.95)
     plt.tight_layout()
     plt.savefig(output_path, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
@@ -95,7 +115,7 @@ def main():
             }
             puits_stats = calculate_puits_stats(cell_counts, puits_groups)
             output_path = OUTPUT_TEMPLATE.format(run_tag=RUN_TAG, suffix=suffix)
-            plot_puits_cell_counts(puits_stats, output_path, PUITS_CONCENTRATIONS)
+            plot_puits_cell_counts(puits_stats, output_path, PUITS_CONCENTRATIONS, y_mode=Y_MODE, y_max=Y_MAX)
         print("All plots have been saved.")
     except Exception as e:
         print(f"Error occurred: {str(e)}")
