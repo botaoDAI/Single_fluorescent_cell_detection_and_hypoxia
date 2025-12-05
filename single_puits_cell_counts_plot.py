@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 
 # ---- 可调参数集中 ----
 # 只改一次标签，输入HDF5路径和输出文件名都会同步
-RUN_TAG = "1024_0.0375"
-HDF5_PATH = f"results 151025/output_file_{RUN_TAG}.hdf5"
+RUN_TAG = "1027_0.0375"
+HDF5_PATH = f"results 141125/output_file_{RUN_TAG}.hdf5"
 SUFFIX_RANGE = range(1, 10)  # 生成1到9
 PUITS_GROUP_TEMPLATES = {
     # 顺序与 aggregated 保持一致，颜色/图例一致
@@ -18,16 +18,19 @@ PUITS_GROUP_TEMPLATES = {
     # 如需加入A1/B1等，按同样格式扩展即可
 }
 CONCENTRATION_VALUES = [0.11, 0.22, 0.44, 0.88, 1.76, 3.52]
+CONCENTRATION_VALUES = [0.043, 0.087, 0.174, 0.348, 0.696, 1.39]
 PUITS_CONCENTRATIONS = {name: conc for name, conc in zip(PUITS_GROUP_TEMPLATES.keys(), CONCENTRATION_VALUES)}
-OUTPUT_TEMPLATE = "results 151025/initial curve/puits_cell_counts_{run_tag}_{suffix}.pdf"
+OUTPUT_TEMPLATE = "results 141125/initial curve/puits_cell_counts_{run_tag}_{suffix}.pdf"
 PIXEL_SIZE_UM = 1.24
 IMAGE_WIDTH_PX = 1408
 IMAGE_HEIGHT_PX = 1040
 FIELD_AREA_MICRONS2 = (IMAGE_WIDTH_PX * PIXEL_SIZE_UM) * (IMAGE_HEIGHT_PX * PIXEL_SIZE_UM)
+# 每帧间隔（小时）；改这里即可调整时间轴单位
+FRAME_INTERVAL_HOURS = 3
 # y 轴模式："count"（默认，细胞计数）或 "density"（细胞密度）
 Y_MODE = "density"
 # y 轴上限；None 时按 Matplotlib 自动缩放
-Y_MAX = 0.0014
+Y_MAX = 0.002
 
 
 def read_all_cell_counts(hdf5_path):
@@ -85,7 +88,7 @@ def plot_puits_cell_counts(puits_stats, output_path, puits_concentrations=None, 
     y_label = "Cell count" if y_mode == "count" else "Cell density (cells/µm²)"
     for i, (puits_name, stats) in enumerate(puits_stats.items()):
         n_points = len(stats['mean_counts'])
-        x = np.arange(0, n_points * 1.5, 1.5)
+        x = np.arange(0, n_points * FRAME_INTERVAL_HOURS, FRAME_INTERVAL_HOURS)
         y, std_dev = prepare_y_values(stats['mean_counts'], stats['variances'], y_mode)
         label_text = puits_name
         if puits_concentrations and puits_name in puits_concentrations:

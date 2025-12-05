@@ -20,33 +20,34 @@ import numpy as np
 
 # ------- Configuration -------
 # Data roots
-HYPOXIE_DIR = Path("../Cell_Radiation_Proliferation_Model/results txt for model 1015/hypoxie")
-NORMOXIE_DIR = Path("../Cell_Radiation_Proliferation_Model/results txt for model 1015/normoxie")
+HYPOXIE_DIR = Path("../Cell_Radiation_Proliferation_Model/results txt for model 1114/hypoxie")
+NORMOXIE_DIR = Path("../Cell_Radiation_Proliferation_Model/results txt for model 1114/normoxie")
 
 # Choose which set of files to read (same template for both conditions).
 # Switch to the 10 Gy set by replacing the template line below with:
-# FILE_TEMPLATE = "Well{idx}_Incucyte_F98_10Gy_2025_10_15_smooth=35.txt"
+#FILE_TEMPLATE = "Well{idx}_Incucyte_F98_10Gy_2025_11_14_smooth=35.txt"
 FILE_TEMPLATE = "0_Gy_Well{idx}_3exps.txt"
 
 # Initial density dictionary (x10^5/ml) keyed by file number.
 INITIAL_DENSITIES = {
-    1: 0.11,
-    2: 0.22,
-    3: 0.44,
-    4: 0.88,
-    5: 1.76,
-    6: 3.52,
+    1: 0.043,
+    2: 0.087,
+    3: 0.174,
+    4: 0.348,
+    5: 0.696,
+    6: 1.39,
 }
 
-# Frame-to-time conversion (hours between frames)
-TIME_STEP_HOURS = 1.5
+# Frame-to-time conversion (hours between frames); hypoxie/normoxie 可单独调整
+TIME_STEP_HOURS_HYPOXIE = 1.5
+TIME_STEP_HOURS_NORMOXIE = 3
 
 # Where to save figures
-OUTPUT_DIR = Path("./results 151025/hypoxie_normoxie_plots")
+OUTPUT_DIR = Path("./results 141125/hypoxie_normoxie_plots")
 
 # 根据开关只画到 y 第一次达到 1.5e-3 的功能
-CUT_AT_THRESHOLD = True  # 默认关闭以保持原行为
-THRESHOLD_VALUE = 1.5e-3
+CUT_AT_THRESHOLD = False  # 默认关闭以保持原行为
+THRESHOLD_VALUE = 0.8e-3
 
 
 def load_mean_std(path: Path) -> Tuple[np.ndarray, np.ndarray]:
@@ -75,8 +76,8 @@ def load_condition_series(base_dir: Path, wells: List[int]) -> Dict[int, Dict[st
     return data
 
 
-def build_time_axis(n_points: int) -> np.ndarray:
-    return np.arange(n_points, dtype=float) * TIME_STEP_HOURS
+def build_time_axis(n_points: int, step_hours: float) -> np.ndarray:
+    return np.arange(n_points, dtype=float) * step_hours
 
 
 def maybe_truncate(time_axis: np.ndarray, y_values: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -93,7 +94,8 @@ def maybe_truncate(time_axis: np.ndarray, y_values: np.ndarray) -> Tuple[np.ndar
 def combined_plot(
     hypoxie: Dict[int, Dict[str, np.ndarray]],
     normoxie: Dict[int, Dict[str, np.ndarray]],
-    time_axis: np.ndarray,
+    hypoxie_time: np.ndarray,
+    normoxie_time: np.ndarray,
     output_path: Path,
 ) -> None:
     colors = plt.get_cmap("tab10").colors
@@ -102,8 +104,8 @@ def combined_plot(
     for i, idx in enumerate(sorted(INITIAL_DENSITIES.keys())):
         color = colors[i % len(colors)]
         density = INITIAL_DENSITIES[idx]
-        h_x, h_y = maybe_truncate(time_axis, hypoxie[idx]["mean"])
-        n_x, n_y = maybe_truncate(time_axis, normoxie[idx]["mean"])
+        h_x, h_y = maybe_truncate(hypoxie_time, hypoxie[idx]["mean"])
+        n_x, n_y = maybe_truncate(normoxie_time, normoxie[idx]["mean"])
         plt.plot(
             h_x,
             h_y,
@@ -140,7 +142,8 @@ def highlight_plot(
     focus_idx: int,
     hypoxie: Dict[int, Dict[str, np.ndarray]],
     normoxie: Dict[int, Dict[str, np.ndarray]],
-    time_axis: np.ndarray,
+    hypoxie_time: np.ndarray,
+    normoxie_time: np.ndarray,
     output_path: Path,
     faded_alpha: float = 0.15,
 ) -> None:
@@ -152,8 +155,8 @@ def highlight_plot(
         density = INITIAL_DENSITIES[idx]
         emphasis = 1.0 if idx == focus_idx else faded_alpha
         linewidth = 2.2 if idx == focus_idx else 1.3
-        h_x, h_y = maybe_truncate(time_axis, hypoxie[idx]["mean"])
-        n_x, n_y = maybe_truncate(time_axis, normoxie[idx]["mean"])
+        h_x, h_y = maybe_truncate(hypoxie_time, hypoxie[idx]["mean"])
+        n_x, n_y = maybe_truncate(normoxie_time, normoxie[idx]["mean"])
         plt.plot(
             h_x,
             h_y,
@@ -198,16 +201,18 @@ def main() -> None:
     hypoxie_data = load_condition_series(HYPOXIE_DIR, wells)
     normoxie_data = load_condition_series(NORMOXIE_DIR, wells)
 
-    n_points = len(next(iter(hypoxie_data.values()))["mean"])
-    time_axis = build_time_axis(n_points)
+    hypoxie_points = len(next(iter(hypoxie_data.values()))["mean"])
+    normoxie_points = len(next(iter(normoxie_data.values()))["mean"])
+    hypoxie_time = build_time_axis(hypoxie_points, TIME_STEP_HOURS_HYPOXIE)
+    normoxie_time = build_time_axis(normoxie_points, TIME_STEP_HOURS_NORMOXIE)
 
     template_label = Path(FILE_TEMPLATE.format(idx="X")).stem.replace(" ", "_")
     combined_path = OUTPUT_DIR / f"hypoxie_normoxie_all_wells_{template_label}.pdf"
-    combined_plot(hypoxie_data, normoxie_data, time_axis, combined_path)
+    combined_plot(hypoxie_data, normoxie_data, hypoxie_time, normoxie_time, combined_path)
 
     for idx in wells:
         out_path = OUTPUT_DIR / f"hypoxie_normoxie_highlight_well{idx}_{template_label}.pdf"
-        highlight_plot(idx, hypoxie_data, normoxie_data, time_axis, out_path)
+        highlight_plot(idx, hypoxie_data, normoxie_data, hypoxie_time, normoxie_time, out_path)
 
     print(f"Saved combined plot to: {combined_path}")
     print(f"Saved per-well highlight plots to: {OUTPUT_DIR}")

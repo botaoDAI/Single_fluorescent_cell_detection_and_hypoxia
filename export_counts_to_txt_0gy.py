@@ -80,8 +80,8 @@ def save_mean_std_txt(output_path: str, means: np.ndarray, stds: np.ndarray) -> 
 
 def main():
     # ===== 可按需修改的输入路径与设置 =====
-    hdf5_path = "./results 151025/output_file_1023_0.0375.hdf5"
-    output_dir = "./results 151025"
+    hdf5_path = "./results 141125/output_file_1029_0.0375.hdf5"
+    output_dir = "../Cell_Radiation_Proliferation_Model/results txt for model 1114/hypoxie"
     # 将 1..9 次拍摄作为“重复实验”汇总
     suffixes = list(range(1, 10))
     # 孔位到“井号”的映射（与 Model_Control.py 中 num_well 一致：1..6）

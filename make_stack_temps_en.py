@@ -17,14 +17,15 @@ from datetime import datetime
 import tifffile
 
 # Configurable parameters
-subdir_name = '1021'  # We process all wells (puits) and all positions of one plate at a time. 
+subdir_name = '1031'  # We process all wells (puits) and all positions of one plate at a time. 
                      # The plate is identified by the Incucyte camera number (subdir_name). 
                      # For example, for the first plate of the last experiment, 
                      # we can find it under /Mathilde 020725 hypoxie/hypoxie/EssenFiles/ScanData/2507/02/1522
 
-channel = 'Ph'  # Channel name, e.g., 'C2' for red fluorescence, 'Ph' for bright field, etc.
+channel = 'C2'  # Channel name, e.g., 'C2' for red fluorescence, 'Ph' for bright field, etc.
 
-base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Mathilde hypoxie 151025/Hypoxie 151025/EssenFiles/ScanData/")
+#base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Mathilde hypoxie 151025/Hypoxie 151025/EssenFiles/ScanData/")
+base_path = "/Volumes/Mathilde 3/Mathilde 141125 Hypoxie +- IR/141125 Hypoxie +- IR/EssenFiles/ScanData"
 output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"stack bf {subdir_name}")
 puits = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3']  # List of well names
 positions = range(1, 10)  # Positions 1-9 in each well

@@ -52,8 +52,8 @@ import numpy as np
 # =============== CONFIGURATION ====================================================================================
 
 # Input/output parameters
-INPUT_PATTERN = "./results 151025/stack rouge 1024/*.tif"  # Glob pattern for the stack images to process
-OUTPUT_HDF5 = "./results 151025/output_file_1024_0.0375.hdf5"  # Destination file for results
+INPUT_PATTERN = "./results 141125/stack rouge 1031/*.tif"  # Glob pattern for the stack images to process
+OUTPUT_HDF5 = "./results 141125/output_file_1031_0.0375.hdf5"  # Destination file for results
 CONFIRM_BEFORE_RUN = True  # Keep the confirmation prompt enabled
 
 # Detection parameters

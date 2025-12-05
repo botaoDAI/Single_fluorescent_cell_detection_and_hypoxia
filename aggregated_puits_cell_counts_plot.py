@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 
 # ---- 可调参数放在一起，方便修改 ----
 # 只需改一次标签，输入HDF5和输出图片名都会同步
-RUN_TAG = "1022_0.0375"
-HDF5_PATH = f"results 151025/output_file_{RUN_TAG}.hdf5"
+RUN_TAG = "1027_0.0375"
+HDF5_PATH = f"results 141125/output_file_{RUN_TAG}.hdf5"
 PUITS_IMAGE_SUFFIX = [str(s) for s in range(1, 10)]
 # 如需包含A1/B1等组，可参考下方格式添加：
 # PUITS_GROUPS = {
@@ -21,15 +21,20 @@ PUITS_GROUPS = {
     'C3': [f'ImageC3-{s}-C2' for s in PUITS_IMAGE_SUFFIX],
 }
 # 从A2到C3的初始浓度（0.11 x10^5开始，每次*2到3.52 x10^5）
-CONCENTRATION_VALUES = [0.11, 0.22, 0.44, 0.88, 1.76, 3.52]
+CONCENTRATION_VALUES = [0.043, 0.087, 0.174, 0.348, 0.696, 1.39]
 PUITS_CONCENTRATIONS = {name: conc for name, conc in zip(PUITS_GROUPS.keys(), CONCENTRATION_VALUES)}
 OUTPUT_PATH = f"puits_cell_counts_{RUN_TAG}_aggregated.png"
 PIXEL_SIZE_UM = 1.24
 IMAGE_WIDTH_PX = 1408
 IMAGE_HEIGHT_PX = 1040
 FIELD_AREA_MICRONS2 = (IMAGE_WIDTH_PX * PIXEL_SIZE_UM) * (IMAGE_HEIGHT_PX * PIXEL_SIZE_UM)
+# 每帧间隔（小时）；改这里即可调整时间轴单位
+FRAME_INTERVAL_HOURS = 3
 # y 轴模式："count"（默认，细胞计数）或 "density"（细胞密度）
-Y_MODE = "count"
+Y_MODE = "density"
+# 根据开关只画到 y 第一次达到 1.5e-3 的功能
+CUT_AT_THRESHOLD = False
+THRESHOLD_VALUE = 0.8e-3
 
 
 def read_all_cell_counts(hdf5_path):
@@ -81,19 +86,38 @@ def prepare_y_values(mean_counts, variances, y_mode):
     return y, std_dev
 
 
+def maybe_truncate_curve(x_values, y_values, std_values=None):
+    """根据开关只画到 y 第一次达到 1.5e-3 的功能。"""
+    if not CUT_AT_THRESHOLD:
+        return x_values, y_values, std_values
+    hit_indices = np.where(y_values >= THRESHOLD_VALUE)[0]
+    if hit_indices.size == 0:
+        return x_values, y_values, std_values
+    end_idx = int(hit_indices[0])
+    if std_values is None:
+        return x_values[: end_idx + 1], y_values[: end_idx + 1], None
+    return (
+        x_values[: end_idx + 1],
+        y_values[: end_idx + 1],
+        std_values[: end_idx + 1],
+    )
+
+
 def plot_puits_cell_counts(puits_stats, output_path, puits_concentrations=None, y_mode="count"):
     plt.figure(figsize=(15, 8))
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
     y_label = "Cell count" if y_mode == "count" else "Cell density (cells/µm²)"
     for i, (puits_name, stats) in enumerate(puits_stats.items()):
         n_points = len(stats['mean_counts'])
-        x = np.arange(0, n_points * 1.5, 1.5)
+        x = np.arange(0, n_points * FRAME_INTERVAL_HOURS, FRAME_INTERVAL_HOURS)
         y, std_dev = prepare_y_values(stats['mean_counts'], stats['variances'], y_mode)
         label_text = puits_name
         if puits_concentrations and puits_name in puits_concentrations:
             label_text = f" ({puits_concentrations[puits_name]:.2f} x10^5/ml)"
-        plt.scatter(x, y, label=label_text, color=colors[i], marker='o', s=50, alpha=0.7)
-        plt.fill_between(x, y - std_dev, y + std_dev, color=colors[i], alpha=0.1)
+        x_plot, y_plot, std_plot = maybe_truncate_curve(x, y, std_dev)
+        plt.scatter(x_plot, y_plot, label=label_text, color=colors[i], marker='o', s=50, alpha=0.7)
+        if std_plot is not None:
+            plt.fill_between(x_plot, y_plot - std_plot, y_plot + std_plot, color=colors[i], alpha=0.1)
     plt.xlabel('Time (h)', fontsize=24, fontweight='bold')
     plt.ylabel(y_label, fontsize=24, fontweight='bold')
     plt.xticks(fontsize=22)
